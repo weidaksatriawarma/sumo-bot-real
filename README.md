@@ -228,7 +228,10 @@ Two ways to use the mobile app:
 2. Allow "Install from Unknown Sources" in settings
 3. Tap to install
 4. Connect phone to the same WiFi as the ESP32 (or to the `SumoBot` AP)
-5. Tap the gear icon → enter the ESP32 IP shown in Serial Monitor (or `192.168.4.1` for AP mode)
+5. Open the app → tap the gear icon (Control tab) → enter the ESP32 IP
+6. **Optional but recommended:** open the **Network** tab and tap
+   "Grant permission" so the app can show your phone's WiFi SSID in the
+   info panel (Android 10+ requires this for SSID access)
 
 ### Option B — Build From Source (Flutter)
 
@@ -247,26 +250,55 @@ See `sumo-mobile/README.md` for full Flutter setup instructions.
 - **Center red button** → emergency stop
 - **Gear icon** → set ESP32 IP
 
-### App Panels
+### App Tabs
 
-The mobile app exposes three live panels stacked vertically:
+The mobile app uses a bottom navigator with three tabs:
 
-1. **RADAR card (top)** — real-time HC-SR04 distance
-   - Polled every 250 ms via `dist` UDP packet
-   - Color-coded state badge:
-     - **CLEAR** (green) — distance > 50 cm
-     - **TARGET** (amber) — 20 cm < distance ≤ 50 cm
-     - **LOCK-ON** (red, glow) — distance ≤ 20 cm
-     - **NO ECHO** (gray) — sensor returns -1 (out of range)
-   - Animated fill bar (200 cm max scale)
+#### 1. Control tab — driving the bot
 
-2. **D-Pad (center)** — directional control with rounded buttons + center STOP
+Three live panels stacked vertically:
 
-3. **PWM SPEED panel (bottom)** — pulse-width modulation control
-   - Slider: 0 – 255 (51 divisions, sends `spd:N` on release)
-   - Live readout: raw value (`200 / 255`) and duty cycle percentage (`78% duty`)
-   - **FREQ pill** — current PWM frequency (e.g. `20 kHz`) read from firmware via `info`
-   - **RES pill** — PWM resolution in bits (e.g. `8-bit`)
+- **RADAR card (top)** — real-time HC-SR04 distance
+  - Polled every 250 ms via `dist` UDP packet
+  - Color-coded state badge:
+    - **CLEAR** (green) — distance > 50 cm
+    - **TARGET** (amber) — 20 cm < distance ≤ 50 cm
+    - **LOCK-ON** (red, glow) — distance ≤ 20 cm
+    - **NO ECHO** (gray) — sensor returns -1 (out of range)
+  - Animated fill bar (200 cm max scale)
+
+- **D-Pad (center)** — directional control with rounded buttons + center STOP
+
+- **PWM SPEED panel (bottom)** — pulse-width modulation control
+  - Slider: 0 – 255 (51 divisions, sends `spd:N` on release)
+  - Live readout: raw value (`200 / 255`) and duty cycle percentage (`78% duty`)
+  - **FREQ pill** — current PWM frequency (e.g. `20 kHz`) read from firmware via `info`
+  - **RES pill** — PWM resolution in bits (e.g. `8-bit`)
+
+#### 2. Logs tab — live UDP packet feed
+
+A scrolling log of every UDP packet sent and every reply received. Useful
+for debugging connection issues and watching what the firmware reports.
+
+- **TX rows** (green ↑) — outgoing commands (`maju`, `spd:200`, `dist`, …)
+- **RX rows** (blue ↓) — incoming replies (`pong`, `ok`, `dist:42`, `info:freq=…`)
+- **SYS rows** (gray) — connection state changes (`Connected`, `No response`, `App started`)
+- **ERR rows** (red) — socket / send failures
+- Filter chips toggle each category on/off; trash icon clears the buffer
+- Buffer holds the most recent 200 entries (newest at top), with millisecond timestamps
+
+#### 3. Network tab — WiFi & connection info
+
+Three cards with live data:
+
+- **Phone WiFi** — current SSID, IPv4, gateway, and BSSID of the network
+  the phone is on. Pulls from Android's WiFi service via `network_info_plus`.
+  Requires **location permission** (Android 10+); the app shows an
+  in-line "Grant permission" CTA if it's denied.
+- **Bot Connection** — configured bot IP, UDP port, status pill, "last
+  reply N seconds ago", current speed/PWM config.
+- **Recent Bot IPs** — history of the last 5 bot IPs you've connected
+  to. Tap to switch to that IP, long-press to remove from history.
 
 ---
 
