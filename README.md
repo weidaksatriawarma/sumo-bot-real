@@ -132,34 +132,39 @@ A companion Flutter mobile app (`sumo-mobile/`) provides a polished controller U
 
 Four `.ino` sketches are provided. Pick the one that matches your environment:
 
-| File              | Mode             | Transport | Best For                              |
-|-------------------|------------------|-----------|---------------------------------------|
-| `sumo.ino`        | WiFi Station     | HTTP      | Quick test — control from any browser |
-| `sumo_udp.ino`    | WiFi Station     | UDP       | Low-latency play on home WiFi         |
-| `sumo_last.ino`   | WiFi Station     | UDP + speed control | Production with the Flutter app   |
-| `sumo_udp_ap.ino` | Access Point     | UDP       | Arena / no-router environments        |
+| Sketch                                       | Mode         | Transport            | Best For                              |
+|----------------------------------------------|--------------|----------------------|---------------------------------------|
+| `firmware/sumo_http_sta/sumo_http_sta.ino`   | WiFi Station | HTTP                 | Quick test — control from any browser |
+| `firmware/sumo_udp_sta/sumo_udp_sta.ino`     | WiFi Station | UDP (minimal)        | Low-latency play on home WiFi         |
+| `firmware/sumo_main/sumo_main.ino`           | WiFi Station | UDP + full features  | Production with the Flutter app       |
+| `firmware/sumo_ap/sumo_ap.ino`               | Access Point | UDP + full features  | Arena / no-router environments        |
 
-### `sumo.ino` — Web UI Mode
+> **Arduino IDE tip:** Each sketch lives in its own folder so the IDE can
+> compile it cleanly. Open the `.ino` directly (e.g.
+> `firmware/sumo_main/sumo_main.ino`) — don't try to open the parent
+> `firmware/` folder.
+
+### `sumo_http_sta.ino` — Web UI Mode
 - Hosts an HTML D-Pad on port 80
 - Open `http://<ESP32-IP>` in any phone browser
 - Endpoints: `/maju`, `/mundur`, `/kiri`, `/kanan`, `/stop`
 - Uses `analogWrite` for PWM (Arduino-friendly, ~5 kHz)
 
-### `sumo_udp.ino` — UDP Station
+### `sumo_udp_sta.ino` — UDP Station (minimal)
 - Connects to existing WiFi
 - Listens on UDP port **4210**
 - 300 ms safety watchdog: motors auto-stop if commands stop arriving
-- Recommended for use with the SumoBot Flutter app
+- Minimal reference implementation — for the full feature set use `sumo_main.ino`
 
-### `sumo_last.ino` — UDP Station with PWM + Ultrasonic
-- Same as `sumo_udp.ino` plus:
+### `sumo_main.ino` — UDP Station with PWM + Ultrasonic (production)
+- Same as `sumo_udp_sta.ino` plus:
   - Dynamic PWM duty cycle: `spd:180` / `pwm:180` packet sets duty 0–255
   - HC-SR04 ultrasonic: `dist` packet returns `dist:NN` (cm) or `dist:-1` (no echo)
   - PWM telemetry: `info` packet returns `info:freq=20000,duty=N,res=8,max=255`
 - 20 kHz PWM (silent operation, above audible range)
 - Replies `ok` / `pong` / `spd:N` / `dist:N` / `info:...` so the app can sync state
 
-### `sumo_udp_ap.ino` — Access Point Mode (recommended for matches)
+### `sumo_ap.ino` — Access Point Mode (recommended for matches)
 - ESP32 broadcasts WiFi SSID **`SumoBot`** (password: `sumo1234`)
 - Bot IP is fixed: **`192.168.4.1`**
 - LED status (GPIO 2): blinks 1 Hz when idle, solid when phone connected
@@ -187,18 +192,24 @@ Four `.ino` sketches are provided. Pick the one that matches your environment:
 
 ### 3. Configure WiFi (STA Modes Only)
 
-Open `sumo.ino`, `sumo_udp.ino`, or `sumo_last.ino` and edit:
+Open one of the STA-mode sketches and replace the placeholder credentials:
+
+- `firmware/sumo_http_sta/sumo_http_sta.ino`
+- `firmware/sumo_udp_sta/sumo_udp_sta.ino`
+- `firmware/sumo_main/sumo_main.ino`
 
 ```cpp
-const char* ssid     = "YOUR_WIFI_NAME";
-const char* password = "YOUR_WIFI_PASSWORD";
+const char* ssid     = "YOUR_WIFI_SSID";       // ← change
+const char* password = "YOUR_WIFI_PASSWORD";   // ← change
 ```
 
-For `sumo_udp_ap.ino`, optionally change the broadcast SSID and password:
+For `firmware/sumo_ap/sumo_ap.ino`, the bot creates its own WiFi — no
+configuration needed, but you can optionally rename the broadcast SSID
+and password:
 
 ```cpp
 const char* ap_ssid     = "SumoBot";
-const char* ap_password = "sumo1234";
+const char* ap_password = "sumo1234";   // min 8 characters (WPA2)
 ```
 
 ### 4. Upload
@@ -262,7 +273,7 @@ The mobile app exposes three live panels stacked vertically:
 ## Command Reference
 
 All firmware variants accept the same core command vocabulary (sent as a UTF-8 string).
-PWM speed, ultrasonic, and `info` commands are available in `sumo_last.ino` and `sumo_udp_ap.ino`.
+PWM speed, ultrasonic, and `info` commands are available in `sumo_main.ino` and `sumo_ap.ino`.
 
 | Command  | Action                                              | Reply                            |
 |----------|-----------------------------------------------------|----------------------------------|
@@ -301,10 +312,10 @@ const int STATUS_LED       = 2;   // ESP32 onboard LED
 
 | Variant            | Frequency | Resolution | API used        |
 |--------------------|-----------|------------|-----------------|
-| `sumo.ino`         | ~5 kHz    | 8-bit      | `analogWrite()` |
-| `sumo_udp.ino`     | ~5 kHz    | 8-bit      | `analogWrite()` |
-| `sumo_last.ino`    | 20 kHz    | 8-bit      | `ledcAttach()` / `ledcWrite()` |
-| `sumo_udp_ap.ino`  | 1 kHz     | 8-bit      | `ledcAttach()` / `ledcWrite()` |
+| `sumo_http_sta.ino`         | ~5 kHz    | 8-bit      | `analogWrite()` |
+| `sumo_udp_sta.ino`     | ~5 kHz    | 8-bit      | `analogWrite()` |
+| `sumo_main.ino`    | 20 kHz    | 8-bit      | `ledcAttach()` / `ledcWrite()` |
+| `sumo_ap.ino`  | 1 kHz     | 8-bit      | `ledcAttach()` / `ledcWrite()` |
 
 PWM duty cycle is always 0–255. Effective speed depends on motor + battery, but typical thresholds:
 - **0–60** → motor stalls, no movement
@@ -312,7 +323,7 @@ PWM duty cycle is always 0–255. Effective speed depends on motor + battery, bu
 - **120–200** → cruise speed
 - **200–255** → full attack speed
 
-### HTTP Endpoints (sumo.ino)
+### HTTP Endpoints (sumo_http_sta.ino)
 
 ```
 GET http://<ESP32-IP>/         → Web UI (D-Pad)
@@ -328,21 +339,27 @@ GET http://<ESP32-IP>/stop     → Stop
 ## Project Structure
 
 ```
-sumo-bot-reat/
-├── sumo.ino             # WiFi STA + HTTP web UI
-├── sumo_udp.ino         # WiFi STA + UDP listener
-├── sumo_last.ino        # WiFi STA + UDP + speed control (used by Flutter app)
-├── sumo_udp_ap.ino      # WiFi AP + UDP (no-router mode)
-├── SumoBot.apk          # Pre-built Android controller
-├── README.md            # This file
-└── sumo-mobile/         # Flutter source for the controller app
-    ├── lib/
-    │   └── main.dart
-    ├── android/
-    ├── pubspec.yaml
-    ├── preview.png
-    ├── preview-light.png
-    └── README.md
+sumo-bot-real/
+├── firmware/                           # ESP32 Arduino sketches (one per folder)
+│   ├── sumo_http_sta/
+│   │   └── sumo_http_sta.ino           # WiFi STA + HTTP web UI (browser controller)
+│   ├── sumo_udp_sta/
+│   │   └── sumo_udp_sta.ino            # WiFi STA + UDP (minimal reference)
+│   ├── sumo_main/
+│   │   └── sumo_main.ino               # WiFi STA + UDP + PWM + ultrasonic (production)
+│   └── sumo_ap/
+│       └── sumo_ap.ino                 # WiFi AP  + UDP + PWM + ultrasonic (no-router)
+├── sumo-mobile/                        # Flutter controller app (source)
+│   ├── lib/
+│   │   └── main.dart
+│   ├── android/
+│   ├── pubspec.yaml
+│   ├── preview.png
+│   ├── preview-light.png
+│   └── README.md
+├── SumoBot.apk                         # Pre-built Android controller
+├── .gitignore
+└── README.md                           # This file
 ```
 
 ---
@@ -374,9 +391,9 @@ duty = 255     (100%)      ▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆▆�
 ```
 
 **Frequency choice:**
-- `sumo_last.ino`: 20 kHz — above human hearing, silent operation
-- `sumo_udp_ap.ino`: 1 kHz — safe for older / clone BTS7960 driver boards
-- `sumo.ino` and `sumo_udp.ino`: ~5 kHz (default of `analogWrite` on arduino-esp32 v3)
+- `sumo_main.ino`: 20 kHz — above human hearing, silent operation
+- `sumo_ap.ino`: 1 kHz — safe for older / clone BTS7960 driver boards
+- `sumo_http_sta.ino` and `sumo_udp_sta.ino`: ~5 kHz (default of `analogWrite` on arduino-esp32 v3)
 
 **Setting duty cycle from the app:**
 ```
@@ -439,10 +456,10 @@ if (motorRunning && (millis() - lastCommandAt > COMMAND_TIMEOUT_MS)) {
 | Robot drifts when commanded forward      | Calibrate motors — slightly reduce PWM on the faster side via `spd:N`     |
 | Bot stops randomly                       | Watchdog kicked in — phone may have lost WiFi briefly. Use AP mode.       |
 | ESP32 resets when motors start           | Battery sag — separate logic supply (5 V regulator off battery)           |
-| Whining noise from motors                | Use `sumo_last.ino` with 20 kHz PWM (above audible range)                 |
+| Whining noise from motors                | Use `sumo_main.ino` with 20 kHz PWM (above audible range)                 |
 | HC-SR04 always returns `-1`              | Wire VCC to **5 V** (not 3.3 V); double-check TRIG=GPIO5, ECHO=GPIO18    |
 | Distance reading is unstable             | Add a 10 µF cap across HC-SR04 VCC/GND, mount sensor away from motors    |
-| App speed slider has no effect           | Make sure firmware is `sumo_last.ino` or `sumo_udp_ap.ino` (not `sumo_udp.ino`) |
+| App speed slider has no effect           | Make sure firmware is `sumo_main.ino` or `sumo_ap.ino` (not `sumo_udp_sta.ino`) |
 | App shows `— Hz` in PWM panel            | Tap refresh — app sends `info` on connect; firmware must support `info`   |
 
 ---
