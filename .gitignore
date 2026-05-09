@@ -1,0 +1,59 @@
+# ===== Claude Code session state =====
+.claude/
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+$RECYCLE.BIN/
+
+# ===== IDE / Editor =====
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+*.suo
+.history/
+
+# ===== Flutter / Dart (root-level safety net; sumo-mobile/.gitignore covers nested) =====
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/.pub-cache/
+**/.pub/
+**/build/
+**/coverage/
+**/doc/api/
+**/ios/Flutter/.last_build_id
+app.*.symbols
+app.*.map.json
+
+# ===== Android =====
+**/android/.gradle/
+**/android/captures/
+**/android/local.properties
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+**/android/key.properties
+*.jks
+*.keystore
+
+# ===== Arduino =====
+build/
+*.tmp.*
+
+# ===== Logs =====
+*.log
+npm-debug.log*
+
+# ===== Local secrets (if any added later) =====
+.env
+.env.local
+secrets.h
+wifi_config.h
